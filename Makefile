@@ -12,4 +12,5 @@ render-start:
 	gunicorn -w 5 -b 0.0.0.0:$(PORT) page_analyzer:app
 
 build:
+	pip install -r requirements.txt
 	./build.sh
