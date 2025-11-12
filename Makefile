@@ -13,4 +13,3 @@ render-start:
 
 build:
 	./build.sh
-	uv pip install -r requirements.txt
