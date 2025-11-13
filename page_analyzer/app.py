@@ -11,6 +11,7 @@ from validators.url import url as check_url
 load_dotenv()
 
 DATABASE_URL = os.getenv('DATABASE_URL')
+print(f'============ DATABASE URL: {DATABASE_URL}')
 conn = psycopg2.connect(DATABASE_URL)
 repo = URLRepository(conn)
 
