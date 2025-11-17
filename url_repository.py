@@ -1,11 +1,5 @@
-import os
-
 import psycopg2
 from psycopg2.extras import DictCursor
-
-
-DATABASE_URL = os.getenv('DATABASE_URL')
-conn = psycopg2.connect(DATABASE_URL)
 
 
 class URLRepository:
@@ -67,6 +61,3 @@ class URLRepository:
             id = cur.fetchone()[0]
             url["id"] = id
         self.conn.commit()
-
-
-repo = URLRepository(conn)
