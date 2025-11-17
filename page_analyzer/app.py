@@ -1,33 +1,20 @@
 import os
 from datetime import date
 
-import psycopg2
-from psycopg2.extras import DictCursor
-
 from flask import (Flask, render_template, url_for, request, flash, redirect, abort, get_flashed_messages)
 import psycopg2
 from dotenv import load_dotenv
 
-from url_repository import URLRepository
+from url_repository import URLRepository, repo
 from validators.url import url as check_url
 
 load_dotenv()
 
 DATABASE_URL = os.getenv('DATABASE_URL')
 print(f'============ DATABASE URL: {DATABASE_URL}')
-conn = psycopg2.connect(DATABASE_URL)
-repo = URLRepository(conn) 
 
 app = Flask(__name__)
 app.secret_key = 'secret_key'
-
-
-def get_content():
-        print(' ******** Get contetnt from app.py')
-        with conn.cursor(cursor_factory=DictCursor) as cur:
-            cur.execute("SELECT * FROM urls")
-            return [dict(row) for row in cur]
-
 
 @app.route("/")
 def index():
@@ -41,7 +28,7 @@ def index():
 
 @app.route('/urls')
 def urls_list():
-    urls = get_content()
+    urls = repo.get_content()
     errors = {}
     return render_template(
         'urls/index.html',
