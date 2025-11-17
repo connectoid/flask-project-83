@@ -1,7 +1,10 @@
 import os
 from datetime import date
 
-from flask import (Flask, render_template, url_for, request, flash, redirect, abort)
+import psycopg2
+from psycopg2.extras import DictCursor
+
+from flask import (Flask, render_template, url_for, request, flash, redirect, abort, get_flashed_messages)
 import psycopg2
 from dotenv import load_dotenv
 
@@ -13,10 +16,18 @@ load_dotenv()
 DATABASE_URL = os.getenv('DATABASE_URL')
 print(f'============ DATABASE URL: {DATABASE_URL}')
 conn = psycopg2.connect(DATABASE_URL)
-repo = URLRepository(conn)
+repo = URLRepository(conn) 
 
 app = Flask(__name__)
 app.secret_key = 'secret_key'
+
+
+def get_content():
+        print(' ******** Get contetnt from app.py')
+        with conn.cursor(cursor_factory=DictCursor) as cur:
+            cur.execute("SELECT * FROM urls")
+            return [dict(row) for row in cur]
+
 
 @app.route("/")
 def index():
@@ -30,7 +41,7 @@ def index():
 
 @app.route('/urls')
 def urls_list():
-    urls = repo.get_content()
+    urls = get_content()
     errors = {}
     return render_template(
         'urls/index.html',
@@ -54,9 +65,16 @@ def urls_post():
             errors=errors
         ), 422
     created_at = date.today()
-    url = {'name': url_data['url'], 'created_at': created_at}
-    id = repo.save(url)
-    flash('Site was added successfully', 'success')
+    
+    url = repo.get_url_by_name(url_data['url'])
+    if not url:
+        url = {'name': url_data['url'], 'created_at': created_at}
+        id = repo.save(url)
+        flash('Страница успешно добавлена', 'success')
+        return redirect(url_for('urls_show', id=id, errors=errors))
+    else:
+        flash('Страница уже существует', 'success')
+        id = url['id']
     return redirect(url_for('urls_show', id=id, errors=errors))
 
 
@@ -64,10 +82,13 @@ def urls_post():
 def urls_show(id):
     errors = {}
     url = repo.find(id)
+    messages = get_flashed_messages(with_categories=True)
+
     if not url:
         abort(404)
     return render_template(
         'urls/show.html',
         url=url,
-        errors=errors
+        errors=errors,
+        messages=messages
     )

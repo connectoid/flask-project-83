@@ -6,7 +6,7 @@ class URLRepository:
     def __init__(self, conn):
         self.conn = conn
 
-    def get_content(self):
+    def get_content_(self):
         with self.conn.cursor(cursor_factory=DictCursor) as cur:
             cur.execute("SELECT * FROM urls")
             return [dict(row) for row in cur]
@@ -27,6 +27,13 @@ class URLRepository:
                 (f"%{search_term}%", f"%{search_term}%"),
             )
             return cur.fetchall()
+    
+
+    def get_url_by_name(self, name):
+        with self.conn.cursor(cursor_factory=DictCursor) as cur:
+            cur.execute('SELECT * FROM urls WHERE name = %s', (name,))
+            return cur.fetchone()
+
 
     def save(self, url):
         if "id" in url and url["id"]:
