@@ -70,6 +70,8 @@ def urls_post():
 @app.route('/urls/<int:id>')
 def urls_show(id):
     errors = {}
+    checks = repo.get_checks(id)
+
     url = repo.find(id)
     messages = get_flashed_messages(with_categories=True)
 
@@ -78,6 +80,25 @@ def urls_show(id):
     return render_template(
         'urls/show.html',
         url=url,
+        checks=checks,
+        errors=errors,
+        messages=messages
+    )
+
+
+@app.route('/urls/<int:id>/checks', methods=['POST'])
+def url_check(id):
+    errors = {}
+    url = repo.find(id)
+    created_at = date.today()
+    check_id = repo.check(id, created_at)
+    checks = repo.get_checks(id)
+    messages = get_flashed_messages(with_categories=True)
+
+    return render_template(
+        'urls/show.html',
+        url=url,
+        checks=checks,
         errors=errors,
         messages=messages
     )

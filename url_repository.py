@@ -1,6 +1,29 @@
 import psycopg2
 from psycopg2.extras import DictCursor
 
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+
+
+@dataclass
+class URLCheck:
+    url_id: int
+    status_code: int
+    h1: str
+    title: str
+    description: str
+    created_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc))
+    id: int | None = None
+
+
+@dataclass
+class URL:
+    name: str
+    created_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc))
+    id: int | None = None
+
 
 class URLRepository:
     def __init__(self, conn):
@@ -44,6 +67,30 @@ class URLRepository:
         return url["id"]
 
 
+    def get_checks(self, url_id):
+        with self.conn.cursor(cursor_factory=DictCursor) as cur:
+            cur.execute(
+                """
+                    SELECT * FROM url_checks
+                    WHERE url_id = %s
+                """,
+                (url_id,)
+            )
+            rows = cur.fetchall()
+            return [URLCheck(**row) for row in rows]
+
+
+    def check(self, url_id, created_at):
+        with self.conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO url_checks (url_id, created_at) VALUES (%s, %s) RETURNING id",
+                (url_id, created_at),
+            )
+            id = cur.fetchone()[0]
+        self.conn.commit()
+        return id
+
+
     def _update(self, url):
         with self.conn.cursor() as cur:
             cur.execute(
@@ -58,6 +105,10 @@ class URLRepository:
                 "INSERT INTO urls (name, created_at) VALUES (%s, %s) RETURNING id",
                 (url["name"], url["created_at"]),
             )
-            id = cur.fetchone()[0]
+            row = cur.fetchone()
+            print(row)
+            id = row[0]
             url["id"] = id
         self.conn.commit()
+
+
