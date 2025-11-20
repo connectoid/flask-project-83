@@ -31,6 +31,10 @@ def index():
 @app.route('/urls')
 def urls_list():
     urls = repo.get_content()
+    for url in urls:
+        last_check = repo.get_last_check(url['id'])
+        url['last_check'] = last_check if last_check else ''
+        print(urls)
     errors = {}
     return render_template(
         'urls/index.html',
@@ -74,7 +78,8 @@ def urls_show(id):
 
     url = repo.find(id)
     messages = get_flashed_messages(with_categories=True)
-
+    last_check = repo.get_last_check(id)
+    print(f'Last check: {last_check}')
     if not url:
         abort(404)
     return render_template(
@@ -93,6 +98,7 @@ def url_check(id):
     created_at = date.today()
     check_id = repo.check(id, created_at)
     checks = repo.get_checks(id)
+
     messages = get_flashed_messages(with_categories=True)
 
     return render_template(

@@ -2,7 +2,7 @@ import psycopg2
 from psycopg2.extras import DictCursor
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 
 
 @dataclass
@@ -12,17 +12,21 @@ class URLCheck:
     h1: str
     title: str
     description: str
-    created_at: datetime = field(
-        default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime
     id: int | None = None
+
+    def __post_init__(self):
+        self.created_at = self.created_at.date()
 
 
 @dataclass
 class URL:
     name: str
-    created_at: datetime = field(
-        default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime
     id: int | None = None
+
+    def __post_init__(self):
+        self.created_at = self.created_at.date()
 
 
 class URLRepository:
@@ -32,13 +36,20 @@ class URLRepository:
     def get_content(self):
         with self.conn.cursor(cursor_factory=DictCursor) as cur:
             cur.execute("SELECT * FROM urls")
-            return [dict(row) for row in cur]
+            rows = cur.fetchall()
+            # return [URL(**row) for row in rows]
+            urls = [dict(row) for row in rows]
+            for url in urls:
+                url['created_at'] = url['created_at'].date()
+            return urls
+
 
     def find(self, id):
         with self.conn.cursor(cursor_factory=DictCursor) as cur:
             cur.execute("SELECT * FROM urls WHERE id = %s", (id,))
             row = cur.fetchone()
             return dict(row) if row else None
+
 
     def get_by_term(self, search_term=""):
         with self.conn.cursor(cursor_factory=DictCursor) as cur:
@@ -49,7 +60,8 @@ class URLRepository:
                 """,
                 (f"%{search_term}%", f"%{search_term}%"),
             )
-            return cur.fetchall()
+            rows = cur.fetchall()
+            return [URLCheck(**row) for row in rows]
     
 
     def get_url_by_name(self, name):
@@ -80,6 +92,15 @@ class URLRepository:
             return [URLCheck(**row) for row in rows]
 
 
+    def get_last_check(self, url_id):
+        with self.conn.cursor(cursor_factory=DictCursor) as cur:
+            cur.execute("SELECT * FROM url_checks WHERE url_id = %s", (url_id,))
+            rows = cur.fetchall()
+            last_check_date = URLCheck(**rows[-1]).created_at if rows else None
+            return last_check_date
+
+
+
     def check(self, url_id, created_at):
         with self.conn.cursor() as cur:
             cur.execute(
@@ -106,7 +127,6 @@ class URLRepository:
                 (url["name"], url["created_at"]),
             )
             row = cur.fetchone()
-            print(row)
             id = row[0]
             url["id"] = id
         self.conn.commit()
