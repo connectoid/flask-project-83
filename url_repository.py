@@ -17,6 +17,7 @@ class URLCheck:
 
     def __post_init__(self):
         self.created_at = self.created_at.date()
+        self.status_code = self.status_code if self.status_code else ''
 
 
 @dataclass
@@ -96,16 +97,23 @@ class URLRepository:
         with self.conn.cursor(cursor_factory=DictCursor) as cur:
             cur.execute("SELECT * FROM url_checks WHERE url_id = %s", (url_id,))
             rows = cur.fetchall()
-            last_check_date = URLCheck(**rows[-1]).created_at if rows else None
-            return last_check_date
+            last_check = URLCheck(**rows[-1]) if rows else None
+            return last_check if last_check else None
 
 
 
-    def check(self, url_id, created_at):
+    def check(self, url_id, created_at, h1, title, description, status_code):
+        print(url_id)
+        print(created_at)
+        print(h1)
+        print(title)
+        print(description)
+        print(status_code)
         with self.conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO url_checks (url_id, created_at) VALUES (%s, %s) RETURNING id",
-                (url_id, created_at),
+                "INSERT INTO url_checks (url_id, status_code, h1, title, description, created_at) VALUES (%s, %s, %s, %s, %s, %s) " \
+                "RETURNING id",
+                (url_id, status_code, h1, title, description, created_at),
             )
             id = cur.fetchone()[0]
         self.conn.commit()

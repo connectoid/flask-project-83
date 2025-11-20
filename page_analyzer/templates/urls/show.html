@@ -2,7 +2,7 @@
 
 {% block title %}Анализатор страниц{% endblock %}
 
-{% block header_name%} Сайт: https://mail.ru {% endblock %}
+{% block header_name%} Сайт: {{ url.name }} {% endblock %}
 {% block content %}
 
 <div class="table-responsive">
@@ -43,10 +43,10 @@
       {% for check in checks %}
       <tr>
         <th>{{ check.id }}</th>
-        <th></th>
-        <th></th>
-        <th></th>
-        <th></th>
+        <th>{{ check.status_code }}</th>
+        <th>{{ check.h1 }}</th>
+        <th>{{ check.title }}</th>
+        <th>{{ check.description }}</th>
         <th>{{ check.created_at }}</th>
       </tr>
       {% endfor %}

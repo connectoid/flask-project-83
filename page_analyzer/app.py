@@ -1,6 +1,9 @@
 import os
 from datetime import date
+from pprint import pprint
 
+import requests
+from bs4 import BeautifulSoup
 from flask import (Flask, render_template, url_for, request, flash, redirect, abort, get_flashed_messages)
 import psycopg2
 from dotenv import load_dotenv
@@ -18,6 +21,22 @@ repo = URLRepository(conn)
 app = Flask(__name__)
 app.secret_key = 'secret_key'
 
+
+def get_seo_data(url):
+    print('Strat seo testing')
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'lxml')
+    seo_data = {}
+
+    seo_data['h1'] = soup.find('h1').text if soup.find('h1') else ''
+    seo_data['title'] = soup.find('title').text if soup.find('title') else ''
+    try:
+        seo_data['description'] = soup.find('meta')['content'].text if soup.find('meta')['content'] else ''
+    except Exception:
+        seo_data['description'] = ''
+    return seo_data
+
+
 @app.route("/")
 def index():
     context = 'Context'
@@ -33,7 +52,8 @@ def urls_list():
     urls = repo.get_content()
     for url in urls:
         last_check = repo.get_last_check(url['id'])
-        url['last_check'] = last_check if last_check else ''
+        url['last_check'] = last_check.created_at if last_check and last_check.created_at else ''
+        url['status_code'] = last_check.status_code if last_check and last_check.status_code else ''
         print(urls)
     errors = {}
     return render_template(
@@ -96,8 +116,18 @@ def url_check(id):
     errors = {}
     url = repo.find(id)
     created_at = date.today()
-    check_id = repo.check(id, created_at)
-    checks = repo.get_checks(id)
+    try:
+        response = requests.get(url['name'])
+        response.raise_for_status()
+        seo_data = get_seo_data(url['name'])
+        pprint(seo_data)
+        status_code = response.status_code
+        check_id = repo.check(id, created_at, seo_data['h1'], seo_data['title'], seo_data['description'], status_code)
+        checks = repo.get_checks(id)
+    except Exception as e:
+        print(f'Ошибка HTTP: {e}')
+        flash('Произошла ошибка при проверке', 'danger')
+    return redirect(url_for('urls_show', id=id))
 
     messages = get_flashed_messages(with_categories=True)
 
